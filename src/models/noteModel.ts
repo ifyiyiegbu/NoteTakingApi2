@@ -4,8 +4,8 @@ export interface INote extends Document {
   title: string;
   content: string;
   category: mongoose.Types.ObjectId; // References a Category
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const NoteSchema: Schema = new Schema(
