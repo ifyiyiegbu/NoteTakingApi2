@@ -4,21 +4,33 @@ import Note from "../models/noteModel";
 import Category from "../models/category";
 import { NotFoundError } from "../middleware/errorHandler";
 
-export const createNote = async (req: Request, res: Response, next: NextFunction) => {
+export const createNote = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { title, content, category } = req.body;
+    let categoryId = category;
 
-    // Validate category ObjectId
-    if (!mongoose.Types.ObjectId.isValid(category)) {
+    if (!category) {
+      // Assign a default category
+      let defaultCategory = await Category.findOne({ name: "Uncategorized" });
+      if (!defaultCategory) {
+        defaultCategory = new Category({ name: "Uncategorized" });
+        await defaultCategory.save();
+      }
+      categoryId = defaultCategory._id;
+    } else if (!mongoose.Types.ObjectId.isValid(category)) {
       res.status(400).json({ message: "Invalid category ID" });
       return;
+    } else {
+      // Check if category exists; if not, create it with a default name
+      let existingCategory = await Category.findById(category);
+      if (!existingCategory) {
+        res.status(400).json({ message: "Category not found" });
+        return;
+      }
+      categoryId = existingCategory._id;
     }
 
-    // Check if the category exists, otherwise create a new one
-    const existingCategory = await Category.findById(category) ?? await new Category({ _id: category }).save();
-
-    // Create new note
-    const newNote = new Note({ title, content, category: existingCategory._id });
+    const newNote = new Note({ title, content, category: categoryId });
     await newNote.save();
 
     res.status(201).json(newNote);
@@ -26,6 +38,7 @@ export const createNote = async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 };
+
 
 export const getNotes = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -64,16 +77,30 @@ export const updateNote = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    // Check if the category exists, otherwise create a new one
-    let existingCategory;
-    if (category && mongoose.Types.ObjectId.isValid(category)) {
-      existingCategory = await Category.findById(category) ?? await new Category({ _id: category }).save();
+    let categoryId = category;
+
+    if (!category) {
+      let defaultCategory = await Category.findOne({ name: "Uncategorized" });
+      if (!defaultCategory) {
+        defaultCategory = new Category({ name: "Uncategorized" });
+        await defaultCategory.save();
+      }
+      categoryId = defaultCategory._id;
+    } else if (!mongoose.Types.ObjectId.isValid(category)) {
+      res.status(400).json({ message: "Invalid category ID" });
+      return;
+    } else {
+      let existingCategory = await Category.findById(category);
+      if (!existingCategory) {
+        res.status(400).json({ message: "Category not found" });
+        return;
+      }
+      categoryId = existingCategory._id;
     }
 
-    // Update the note
     const updatedNote = await Note.findByIdAndUpdate(
       id,
-      { title, content, category: existingCategory?._id },
+      { title, content, category: categoryId },
       { new: true, runValidators: true }
     );
 
@@ -84,6 +111,7 @@ export const updateNote = async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 };
+
 
 export const deleteNote = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
