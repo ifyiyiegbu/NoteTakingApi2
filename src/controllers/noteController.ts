@@ -53,6 +53,25 @@ export const getNotes = async (req: Request, res: Response, next: NextFunction) 
 };
 
 /**
+ * Fetch notes by category ID
+ */
+export const getNotesByCategory = async (req: Request<{ categoryId: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { categoryId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return next(new BadRequestError("Invalid category ID"));
+    }
+
+    const notes = await Note.find({ category: categoryId }).populate("category", "name");
+
+    res.json(notes);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get a single note by ID
  */
 export const getNoteById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
