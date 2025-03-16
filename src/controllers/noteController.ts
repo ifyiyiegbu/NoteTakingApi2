@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import Note from "../models/noteModel";
+import Category from "../models/category";
 import { NotFoundError, BadRequestError } from "../middleware/errorHandler";
 
 export const getNotes = async (req: Request, res: Response, next: NextFunction) => {
@@ -34,10 +35,14 @@ export const getNotesByCategory = async (req: Request, res: Response, next: Next
 
 export const createNote = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, content } = req.body;
-    if (!title || !content) throw new BadRequestError("Title and content are required");
+    const { title, content, category } = req.body;
 
-    const newNote = new Note({ title, content });
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) {
+      throw new NotFoundError("Category not found");
+    }
+
+    const newNote = new Note({ title, content, category });
     await newNote.save();
     res.status(201).json(newNote);
   } catch (error) {
@@ -48,13 +53,22 @@ export const createNote = async (req: Request, res: Response, next: NextFunction
 export const updateNote = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { title, content, category } = req.body;
+
+    if (category) {
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        throw new NotFoundError("Category not found");
+      }
+    }
+
     const updatedNote = await Note.findByIdAndUpdate(
       req.params.id,
       { title, content, category },
       { new: true, runValidators: true }
-    ).populate("category");
+    );
 
     if (!updatedNote) throw new NotFoundError("Note not found");
+
     res.json(updatedNote);
   } catch (error) {
     next(error);
