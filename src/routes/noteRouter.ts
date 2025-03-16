@@ -1,22 +1,19 @@
-const express = require('express');
+import express from "express";
 import {
   getNotes,
   getNoteById,
-  getNotesByCategory,
   createNote,
   updateNote,
   deleteNote,
-} from "../controllers/noteController";
-import { validateRequest } from "../middleware/validation";
-import { noteSchema } from "../validate/noteValidation";
+} from "../controllers/noteController"; 
+import { validateNote } from "../middleware/validation";
 
 const router = express.Router();
 
 router.get("/", getNotes);
 router.get("/:id", getNoteById);
-router.get("/categories/:categoryId", getNotesByCategory);
-router.post("/", createNote);
-router.put("/:id", updateNote);
+router.post("/", validateNote, createNote);
+router.put("/:id", validateNote, updateNote);
 router.delete("/:id", deleteNote);
 
 export default router;
